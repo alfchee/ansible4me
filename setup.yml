@@ -1,0 +1,82 @@
+---
+- hosts: localhost
+  vars:
+    docker_old:
+      - docker 
+      - docker-engine 
+      - docker.io 
+      - containerd 
+      - runc
+    docker_deps:
+      - apt-transport-https
+      - ca-certificates 
+      - curl
+      - gnupg-agent
+      - software-properties-common
+    docker_packages:
+      - docker-ce 
+      - docker-ce-cli 
+      - containerd.io
+
+  tasks:
+    - name: Install NVM
+      shell: |
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+      args:
+        executable: /bin/bash
+        chdir: "{{ ansible_env.HOME }}"
+        creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+
+    - name: Load NVM
+      blockinfile:
+        path: '~/.bashrc'
+        block: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+    - name: Install Node 10.16.3
+      shell: '. {{ ansible_env.HOME }}/.nvm/nvm.sh && nvm install 10.16.3'
+      args:
+        creates: "{{ ansible_env.HOME }}/.nvm/versions/node"
+        chdir: "{{ ansible_env.HOME }}"
+        executable: /bin/bash
+
+    - name: Uninstall old versions Docker packages
+      apt:
+        name: "{{ docker_old }}"
+        state: absent
+      become: yes
+    
+    - name: Install needed packages
+      apt:
+        name: "{{ docker_deps }}"
+        update_cache: yes
+        state: present
+      become: yes
+    
+    - name: Add Docker's Official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      become: yes
+    
+    - name: Add Docker Repo
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+      become: yes
+    
+    - name: Install Docker
+      apt:
+        name: "{{ docker_packages }}"
+        state: latest
+      become: yes
+    - name: Verify Docker install
+      shell: docker run hello-world
+      become: yes
+    
+    - name: Allow current user to use Docker
+      shell: "usermod -aG docker $USER"
+      become: yes
+
