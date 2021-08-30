@@ -100,6 +100,7 @@
         install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
       args:
         executable: /bin/bash
+        chdir: "{{ ansible_env.HOME }}"
       become: yes
 
     - name: Install AZ CLI
@@ -115,7 +116,7 @@
 
     - name: Add Google Repo
       apt_repository:
-        repo: deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main
+        repo: deb https://packages.cloud.google.com/apt cloud-sdk main
         state: present
       become: yes
     
